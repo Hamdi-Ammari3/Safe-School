@@ -219,8 +219,8 @@ const Riders = () => {
     try {
       setAddingNewRiderLoading(true);
 
-      //const phoneNumber = `+964${newRiderPhoneNumber}`;
-      const phoneNumber = `+1${newRiderPhoneNumber}`;
+      const phoneNumber = `+964${newRiderPhoneNumber}`; // Prod phone
+      //const phoneNumber = `+1${newRiderPhoneNumber}`; // Test phone
       const clerUser = `user_${newRiderPhoneNumber}`;
       const HARDCODED_PASSWORD = "SecurePass1234!"; 
 

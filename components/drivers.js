@@ -147,8 +147,8 @@ const Drivers = () => {
     try {
       setAddingNewDriverLoading(true);
 
-      //const phoneNumber = `+964${newDriverPhoneNumber}`;
-      const phoneNumber = `+1${newDriverPhoneNumber}`;
+      const phoneNumber = `+964${newDriverPhoneNumber}`;  // Prod phone
+      //const phoneNumber = `+1${newDriverPhoneNumber}`;  // Test Phone
       const clerkUsername = `user_${newDriverPhoneNumber}`;
       const HARDCODED_PASSWORD = "SecurePass1234!";
 
