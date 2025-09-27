@@ -1,7 +1,7 @@
 import React from 'react'
 import { useGlobalState } from '../globalState'
 import { PiStudentLight } from "react-icons/pi"
-import { IoBus } from "react-icons/io5"
+import { GrDirections } from "react-icons/gr"
 import ClipLoader from "react-spinners/ClipLoader"
 
 const Stats = () => {
@@ -37,7 +37,7 @@ const Stats = () => {
 
             <div className='main_section_stat_item'>
                 <div className='main_section_stat_item_icon_div' style={{backgroundColor:'#7ABA37'}}>
-                    <IoBus className='main_section_stat_item_icon'/>
+                    <GrDirections className='main_section_stat_item_icon'/>
                 </div>
                 <div className='main_section_stat_info_item'>
                     <p>خطوط</p>

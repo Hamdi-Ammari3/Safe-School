@@ -718,6 +718,25 @@
   background-color: rgb(149, 91, 254);
   color: white;
 }
+.line-daily-details-button{
+  width: 120px;
+  height: 30px;
+  background-color: #16B1FF;
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.line-daily-details-button > h5 {
+  font-weight: 400;
+  font-size: 13px;
+  color: white;
+}
+.line-daily-details-button:hover {
+  background-color: #0382c2;
+}
 .tracking_driver_main{
   width: 52vw;
   height: 100%;
@@ -1600,6 +1619,125 @@
   .line-time-table th {
     background-color: #f4f4f4;
   }
+  .creating-new-line-form-timing-box{
+    width: 300px;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .copy-day-timing-to-table{
+    width: 55px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0px;
+    left:0px;
+  }
+  .copy-day-timing-to-table > button {
+    width: 55px;
+    height: 25px;
+    background-color: #16B1FF;
+    color: white;
+    border: none;
+    border-radius: 7px;
+  }
+  .driver-line-history-box{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .ant-picker-input >input{
+    cursor: pointer;
+  }
+  .driver-line-history-date-day-box{
+    width: 200px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+  }
+  .driver-line-history-date-day-box > p {
+    color:white
+  }
+  .driver-line-history-date-switch-button{
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    background-color: #16B1FF;
+    cursor: pointer;
+  }
+  .driver-line-history-date-switch-button:hover{
+    background-color: #0289cc;
+  }
+  .driver-line-history-box-phase-btn,.driver-line-history-box-phase-btn-active{
+    width: 100px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .driver-line-history-box-phase-btn-active{
+    background-color: rgba(190, 154, 78, 0.40);
+  }
+  .driver-line-history-main-box,.driver-line-history-main-box-start-trip-riders{
+    width: 400px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+  }
+  .ant-picker-content th{
+    font-size: 12px;
+  }
+  .driver-line-history-main-box-start-trip-timing{
+    width: 400px;
+    height: 50px;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .driver-line-history-main-box-start-trip-riders{
+    height: 200px;
+    justify-content: center;
+  }
+  .driver-line-history-main-box-start-trip-riders-header,.driver-line-history-main-box-start-trip-rider-item{
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .driver-line-history-main-box-start-trip-riders-header{
+    height: 30px;
+    margin-bottom: 15px;
+  }
+  .driver-line-history-main-box-start-trip-riders-header > h5{
+    text-align: center;
+  }
+  .driver-line-history-main-box-start-trip-riders-header > h5:first-child {
+    width: 250px; 
+  }
+  .driver-line-history-main-box-start-trip-riders-header > h5:nth-child(2) {
+    width: 100px; 
+  }
+  .driver-line-history-main-box-start-trip-riders-list{
+    height: 150px;
+    overflow: auto;
+  }
   .creating-new-line-modal{
     width: 470px;
     height: 500px;
@@ -1616,11 +1754,12 @@
     gap: 10px;
   }
   .creating-new-line-form-timing{
-    width: 300px;
+    width: 420px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
   .creating-new-line-form-timing > div{
     width: 300px;
