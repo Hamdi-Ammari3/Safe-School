@@ -1,146 +1,132 @@
-'use client'
-import React,{useState,useEffect} from 'react'
-import {useRouter} from 'next/navigation'
-import { LoadScript } from "@react-google-maps/api"
-import ClipLoader from "react-spinners/ClipLoader"
-import './style.css'
-import Navbar from '../components/navBar'
-import Main from '../components/main'
-import Riders from '../components/riders'
-import Lines from '../components/lines'
-import Drivers from '../components/drivers'
-import DailyStatus from '../components/dailyStatus'
-import Email from '../components/email'
-import PrivateCarRequest from '../components/privateCarRequest'
+"use client";
 
-const libraries = ['places'];
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import ClipLoader from "react-spinners/ClipLoader";
+import {MdDashboard,MdPeople,MdSchool} from "react-icons/md";
+import { PiBagSimpleFill } from "react-icons/pi";
+import { FaBook } from "react-icons/fa";
+import { MdCreateNewFolder } from "react-icons/md";
+import { BsFillCreditCardFill } from "react-icons/bs";
+import { IoDocumentText } from "react-icons/io5";
+import './style.css';
+import Image from 'next/image'
+import defaultLogo from '../images/logo.png'
+
+// Components
+import Main from "../components/main";
+import Students from "../components/students";
+import Teachers from "../components/teachers";
+import Employees from "../components/employees";
+import Classes from "../components/classes";
+import StudentsRequests from "../components/studentsRequests";
+import Bills from "../components/bills";
+import BillingTemplate from "../components/BillingTemplate";
 
 const Dashboard = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [activeSection,setActiveSection] = useState('الرئيسية')
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeSection, setActiveSection] = useState("الرئيسية");
+  const [schoolLogo, setSchoolLogo] = useState(null);
+
   const router = useRouter();
 
-  // Check if admin is logged in
   useEffect(() => {
-    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
+    const adminLoggedIn = localStorage.getItem("adminLoggedIn");
+
     if (!adminLoggedIn) {
-      router.push('/login'); // Redirect to login page if not authenticated
+      router.push("/login");
     } else {
-      setIsAuthenticated(true); // Allow access to the dashboard
+      setIsAuthenticated(true);
+      const storedLogo = localStorage.getItem("schoolLogo");
+      if (storedLogo) {
+        setSchoolLogo(storedLogo);
+      }
     }
+
   }, []);
 
   if (!isAuthenticated) {
     return (
-      <div style={{ width:'100vw',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <ClipLoader
-        color={'#955BFE'}
-        loading={!isAuthenticated}
-        size={70}
-        aria-label="Loading Spinner"
-        data-testid="loader"
-      />
-      </div>   
-  )}
-
-  
-  // Function to handle select section
-  const handleSectionSelect = (section) => {
-    setActiveSection(section)
+      <div className="loader-container">
+        <ClipLoader color="#3b82f6" size={50} />
+      </div>
+    );
   }
 
-  // Function to render section component
+  const links = [
+    { label: "الرئيسية", icon: MdDashboard },
+    { label: "الطلاب", icon: MdSchool},
+    { label: "المدرسين", icon: MdPeople},
+    { label: "الموضفين", icon: PiBagSimpleFill},
+    { label: "الصفوف", icon: FaBook},
+    { label: "طلبات التسجيل", icon: MdCreateNewFolder },
+    { label: "الحسابات", icon: BsFillCreditCardFill},
+    { label: "الفاتورة السنوية", icon: IoDocumentText },
+  ];
+
   const renderContent = () => {
     switch (activeSection) {
-      case 'الرئيسية':
-        return <Main/>
-      case 'الحالة اليومية':
-        return <DailyStatus/>
-      case 'الطلاب' :
-        return <Riders/>
-      case 'الخطوط':
-        return <Lines/>
-      case 'السواق':
-        return <Drivers/>
-      case 'ارسال بلاغ':
-        return <Email/>
-      case 'طلب سيارات خاصة':
-        return <PrivateCarRequest/>
+      case "الرئيسية":
+        return <Main/>;
+      case "الطلاب":
+        return <Students/>;
+      case "المدرسين":
+        return <Teachers/>;
+      case "الموضفين":
+        return <Employees/>;
+      case "الصفوف":
+        return <Classes/>;
+      case "طلبات التسجيل":
+        return <StudentsRequests/>;
+      case "الحسابات":
+        return <Bills/>;
+      case "الفاتورة السنوية":
+        return <BillingTemplate/>
       default:
-        return <Main/>
+        return <Main />;
     }
-  }
+  };
 
   return (
-    <LoadScript 
-      googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}
-      libraries={libraries}
-      language="ar"
-      region="IQ"
-    >
-    <div className='dashboard-container'>
-      <Navbar/>
-      <div className='main-box'>
-        <div className='side-box'>
-          <div>
-            <div
-              onClick={() => handleSectionSelect('الرئيسية')}
-              className={activeSection === 'الرئيسية' ? 'active':''}
-            >
-              <h4 >الرئيسية</h4>
-            </div>
+    <div className="dashboard-container">
 
-            <div
-              onClick={() => handleSectionSelect('الحالة اليومية')}
-              className={activeSection === 'الحالة اليومية' ? 'active':''}
-            >
-              <h4 >الحالة اليومية</h4>
-            </div>
-
-            <div
-              onClick={() => handleSectionSelect('الطلاب')}
-              className={activeSection === 'الطلاب' ? 'active':''}
-            >
-              <h4 >الطلاب</h4>
-            </div>
-
-            <div
-              onClick={() => handleSectionSelect('الخطوط')}
-              className={activeSection === 'الخطوط' ? 'active':''}
-            >
-              <h4>الخطوط</h4>
-            </div>
-
-            <div
-              onClick={() => handleSectionSelect('السواق')}
-              className={activeSection === 'السواق' ? 'active':''}
-            >
-              <h4 >السواق</h4>
-            </div>
-            
-            <div
-              onClick={() => handleSectionSelect('ارسال بلاغ')}
-              className={activeSection === 'ارسال بلاغ' ? 'active':''}
-            >
-              <h4 >ارسال بلاغ</h4>
-            </div>
-
-            <div
-              onClick={() => handleSectionSelect('طلب سيارات خاصة')}
-              className={activeSection === 'طلب سيارات خاصة' ? 'active':''}
-            >
-              <h4 >طلب سيارات خاصة</h4>
-            </div>
-
-          </div>
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <Image
+            src={schoolLogo || defaultLogo}
+            width={50}
+            height={50}
+            alt='logo image'
+            style={{objectFit:'contain'}}
+          />
         </div>
-        <div className='inner-box'>
-          {renderContent()}
+
+        <div className="sidebar-links">
+          {links.map((link) => {
+            const Icon = link.icon;
+            const isActive = activeSection === link.label;
+
+            return (
+              <div
+                key={link.label}
+                onClick={() => setActiveSection(link.label)}
+                className={`sidebar-link ${isActive ? "active" : ""}`}
+              >
+                <Icon size={18} />
+                {link.label}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </aside>
+
+      {/* Main */}
+      <main className="main-content">
+        {renderContent()}
+      </main>
     </div>
-    </LoadScript>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

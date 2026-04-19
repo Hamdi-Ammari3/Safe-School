@@ -1,99 +1,82 @@
-'use client';
-import React, { createContext, useReducer, useEffect } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { DB } from './firebaseConfig';
+"use client";
+
+import React, { createContext, useReducer, useEffect, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { DB } from "./firebaseConfig";
 
 const GlobalStateContext = createContext();
 
 const initialState = {
-  lines: [],
-  riders: [],
-  drivers: [],
+  students: [],
+  teachers: [],
+  employees: [],
+  classes: [],
+  studentsRequests: [],
+  bills: [],
   loading: true,
   error: null,
 };
 
-const globalStateReducer = (state, action) => {
+const reducer = (state, action) => {
   switch (action.type) {
-    case 'FETCH_SUCCESS':
-      return {
-        ...state,
-        ...action.payload,
-        loading: false,
-      };
-    case 'FETCH_ERROR':
-      return {
-        ...state,
-        error: action.error,
-        loading: false,
-      };
+    case "SET_DATA":
+      return { ...state, ...action.payload, loading: false };
+    case "ERROR":
+      return { ...state, error: action.error, loading: false };
     default:
       return state;
   }
 };
 
 export const GlobalStateProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(globalStateReducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const [schoolId, setSchoolId] = useState(null);
 
   useEffect(() => {
-    const storedDashboardName = localStorage.getItem("adminDahboardName");
-    if (!storedDashboardName) {
-      console.log("No dashboard name found in local storage");
-      return;
-    }
-
-    const unsubscribeRiders = onSnapshot(
-      query(collection(DB, "riders"), where("destination", "==", storedDashboardName)),
-      (snapshot) => {
-        const riders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        dispatch({
-          type: "FETCH_SUCCESS",
-          payload: { riders },
-        });
-      }
-    );
-
-    const unsubscribeLines = onSnapshot(
-      query(collection(DB, "lines"), where("destination", "==", storedDashboardName)),
-      (snapshot) => {
-        const lines = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        dispatch({
-          type: "FETCH_SUCCESS",
-          payload: { lines },
-        });
-      }
-    );
-
-    
-    const unsubscribeDrivers = onSnapshot(collection(DB, "drivers"), async (snapshot) => {
-      try {
-        const drivers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-        // Filter line only drivers
-        const lineOnlyDrivers = drivers.filter(driver => driver?.service_type === 'خطوط')
-    
-        // Dispatch filtered drivers
-        dispatch({
-          type: "FETCH_SUCCESS",
-          payload: { drivers: lineOnlyDrivers },
-        });
-    
-      } catch (error) {
-        console.error("Error filtering drivers:", error);
-        dispatch({
-          type: "FETCH_ERROR",
-          error,
-        });
-      }
-    });
-        
-    // Cleanup listeners on unmount
-    return () => {
-      unsubscribeRiders();
-      unsubscribeLines();
-      unsubscribeDrivers();
-    };
+    const id = localStorage.getItem("adminSchoolID");
+    if (id) setSchoolId(id);
   }, []);
+
+  useEffect(() => {
+    if (!schoolId) return;
+
+    const fetchData = async () => {
+      try {
+        const [
+          studentsSnap,
+          teachersSnap,
+          employeesSnap,
+          classesSnap,
+          studentsRequestsSnap,
+          billsSnap
+        ] = await Promise.all([
+          getDocs(query(collection(DB, "students"), where("school_id", "==", schoolId))),
+          getDocs(query(collection(DB, "teachers"), where("school_id", "==", schoolId))),
+          getDocs(query(collection(DB, "employees"), where("school_id", "==", schoolId))),
+          getDocs(query(collection(DB, "classes"), where("schoolId", "==", schoolId))),
+          getDocs(query(collection(DB, "students_requests"), where("school_id", "==", schoolId))),
+          getDocs(query(collection(DB, "student_bills"), where("school_id", "==", schoolId))),
+        ]);
+
+        dispatch({
+          type: "SET_DATA",
+          payload: {
+            students: studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            teachers: teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            employees: employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            classes: classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            studentsRequests: studentsRequestsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            bills: billsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+          },
+        });
+
+      } catch (error) {
+        dispatch({ type: "ERROR", error });
+      }
+    };
+
+    fetchData();
+  }, [schoolId]);
 
   return (
     <GlobalStateContext.Provider value={state}>

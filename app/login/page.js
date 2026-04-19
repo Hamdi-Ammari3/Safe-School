@@ -6,7 +6,7 @@ import { collection,getDocs,query,where } from "firebase/firestore"
 import { DB } from '../../firebaseConfig'
 import ClipLoader from "react-spinners/ClipLoader"
 import Image from 'next/image'
-import logo_image from '../../images/safe-logo.png'
+import logo_image from '../../images/logo.png'
 
 const Login = () => {
   const [username,setUsername] = useState('')
@@ -23,19 +23,27 @@ const Login = () => {
     try {
       // Query Firestore for admin credentials
       const q = query(
-        collection(DB, "admins"),
+        collection(DB, "schoolAdmins"),
         where("username", "==", username),
-        where("password", "==", password) // In production, use hashed passwords
+        where("password", "==", password)
       );
 
       const querySnapshot = await getDocs(q);
+
       if (!querySnapshot.empty) {
         const userData = querySnapshot.docs[0].data()
+
         localStorage.setItem('adminLoggedIn', true)
-        localStorage.setItem('adminDahboardName', userData?.dashboard_name)
-        localStorage.setItem('location', JSON.stringify(userData?.location))
-        localStorage.setItem('fullControl', JSON.stringify(userData?.full_controle))
-        router.push('/')
+        localStorage.setItem('adminDahboardName', userData?.name)
+        localStorage.setItem('adminSchoolID', userData?.school_id)
+        localStorage.setItem('adminSchoolName', userData?.school)
+        localStorage.setItem('schoolLogo', userData?.school_logo)
+        localStorage.setItem('schoolCountry', userData?.country)
+
+        setTimeout(() => {
+          router.push("/");
+        }, 300);
+
       } else {
         setError('يرجى التثبت من المعلومات المدرجة')
       }
@@ -47,41 +55,55 @@ const Login = () => {
   };
 
   return (
-    <div className='login-container'>
-      <div className='login-container-box'>
-        <div className='form-title-box'>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
           <Image
             src={logo_image}
-            width={80}
-            height={80}
-            alt='logo image'
-            style={{objectFit:'contain'}}
+            width={70}
+            height={70}
+            alt="logo"
           />
         </div>
-        {error && <p style={{color:'red'}}>{error}</p>}
-        <div className='form-box'>
-          <form className='form'>
-            <input placeholder='اسم المستخدم' value={username} onChange={(e) => setUsername(e.target.value)}/>
-            <input placeholder='كلمة المرور' value={password} onChange={(e) => setPassword(e.target.value)}/>
-            {loading ? (
-              <div style={{ width:'250px',padding:'12px 0',backgroundColor:'#955BFE',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <ClipLoader
-                  color={'#fff'}
-                  loading={loading}
-                  size={10}
-                  aria-label="Loading Spinner"
-                  data-testid="loader"
-                />
-              </div>
-            ) : (
-              <button onClick={handleLogin}>دخول</button>
-            )}
-            
-          </form>
+
+        <h2 className="login-title">تسجيل الدخول</h2>
+
+        {error && <p className="login-error">{error}</p>}
+
+        <form className="login-form" onSubmit={handleLogin}>
+          <input
+            placeholder="اسم المستخدم"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
+          <input
+            placeholder="كلمة المرور"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {loading ? (
+            <div className="login-btn loading">
+              <ClipLoader size={14} color="#fff" />
+            </div>
+          ) : (
+            <button type="submit" className="login-btn">
+             دخول
+            </button>
+          )}
+        </form>
+      </div>
+
+      {loading && (
+        <div className="page-loading-overlay">
+          <ClipLoader size={40} color="#000" />
+          <p>جاري تسجيل الدخول...</p>
         </div>
-      </div>  
+      )}
     </div>
-  )
+  );
 }
 
 export default Login
