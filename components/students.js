@@ -81,7 +81,6 @@ const Students = () => {
   useEffect(() => {
     const today = new Date();
     const month = today.getMonth() + 1;
-
     const year = today.getFullYear();
 
     const defaultYear =

@@ -46,7 +46,10 @@ const BillingDetails = () => {
             setStudent({ id: studentSnap.id, ...studentSnap.data() });
 
             const billsSnap = await getDocs(
-                query(collection(DB, "student_bills"), where("student_id", "==", id))
+                query(
+                    collection(DB, "student_bills"), 
+                    where("student_id", "==", id)
+                )
             );
 
             const list = billsSnap.docs.map((d) => ({

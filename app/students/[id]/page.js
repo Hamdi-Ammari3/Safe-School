@@ -178,14 +178,44 @@ const StudentDetails = () => {
         }
     };
 
-    //Get next class
+    const GRADES_BY_LEVEL = {
+         ابتدائي: [
+            "أول ابتدائي",
+            "ثاني ابتدائي",
+            "ثالث ابتدائي",
+            "رابع ابتدائي",
+            "خامس ابتدائي",
+            "سادس ابتدائي",
+        ],
+         متوسط: [
+            "أول متوسط",
+            "ثاني متوسط",
+            "ثالث متوسط",
+        ],
+         إعدادي: [
+            "رابع إعدادي",
+            "خامس إعدادي",
+            "سادس إعدادي",
+        ],
+    };
+
     const getNextClasses = () => {
         const currentClass = classes.find(c => c.id === student.class_id);
         if (!currentClass) return [];
 
+        const levelGrades = GRADES_BY_LEVEL[currentClass.educationLevel] || [];
+
+        // 🔹 find current grade index
+        const currentIndex = levelGrades.indexOf(currentClass.grade);
+
+        // 🔹 next grade
+        const nextGrade = levelGrades[currentIndex + 1];
+
+        if (!nextGrade) return []; // last grade (no next)
+
         return classes.filter(c =>
             c.educationLevel === currentClass.educationLevel &&
-            c.grade !== currentClass.grade // simple version
+            c.grade === nextGrade
         );
     };
 
@@ -195,14 +225,8 @@ const StudentDetails = () => {
         return `${start + 1}-${start + 2}`;
     };
 
-    //Promote student to the next grade
     const handleConfirmPromotion = async () => {
         try {
-            if (!selectedNextClass && !isGraduated) {
-                alert("يجب اختيار الصف أو تحديد التخرج");
-                return;
-            }
-
             setLoadingPromotion(true);
 
             const { record, t1, t2, t3, average, result } = promotionData;
@@ -213,31 +237,183 @@ const StudentDetails = () => {
 
             const studentRef = doc(DB, "students", student.id);
 
-            // 🔹 Get next class
-            const nextClass = classes.find(c => c.id === selectedNextClass);
-
-            // 🔹 Get next academic year
             const nextYear = getNextAcademicYear(record.academic_year);
+
+            //CASE 3: FAIL → stay in same class
+            if (result === "fail") {
+
+                if (isGraduated) {
+                    alert("لا يمكن تخريج طالب راسب");
+                    setLoadingPromotion(false);
+                    return;
+                }
+
+                const nextYear = getNextAcademicYear(record.academic_year);
+
+                // 🔹 Billing template
+                const templatesSnap = await getDocs(
+                    query(
+                        collection(DB, "billing_templates"),
+                        where("school_id", "==", student.school_id),
+                        where("academic_year", "==", nextYear)
+                    )
+                );
+
+                if (templatesSnap.empty) {
+                    alert(`لا يوجد قالب فواتير للسنة ${nextYear}`);
+                    setLoadingPromotion(false);
+                    return;
+                }
+
+                const templateDoc = templatesSnap.docs[0];
+                const template = templateDoc.data();
+
+                await runTransaction(DB, async (transaction) => {
+
+                    // Save current year result
+                    transaction.set(recordRef, {
+                        student_id: student.id,
+                        school_id: student.school_id,
+                        academic_year: record.academic_year,
+                        class_id: student.class_id,
+                        class_name: student.class_name,
+                        t1,
+                        t2,
+                        t3,
+                        final_average: average,
+                        result,
+                        created_at: Timestamp.now(),
+                    }, { merge: true });
+
+                    // Create next academic record (same class)
+                    const newRecordRef = doc(collection(DB, "academic_records"));
+
+                    transaction.set(newRecordRef, {
+                        student_id: student.id,
+                        school_id: student.school_id,
+                        academic_year: nextYear,
+                        class_id: student.class_id,
+                        class_name: student.class_name,
+                        t1: null,
+                        t2: null,
+                        t3: null,
+                        final_average: null,
+                        result: null,
+                        created_at: Timestamp.now(),
+                    });
+
+                    //Create bills (same grade)
+                    const gradeName = student.class_grade;
+                    const gradeTotal = template.grade_amounts?.[gradeName];
+
+                    if (!gradeTotal) throw new Error("GRADE_AMOUNT_NOT_FOUND");
+
+                    const numberOfPayments = template.number_of_payments;
+                    const totalAmount = Number(gradeTotal);
+                    const baseAmount = Math.floor(totalAmount / numberOfPayments);
+                    const remainder = totalAmount % numberOfPayments;
+
+                    template.installments.forEach((inst, index) => {
+                        const billRef = doc(collection(DB, "student_bills"));
+
+                        const amount = index === 0 ? baseAmount + remainder : baseAmount;
+
+                        transaction.set(billRef, {
+                            student_id: student.id,
+                            school_id: student.school_id,
+                            academic_year: nextYear,
+                            class_id: student.class_id,
+                            grade_name: gradeName,
+                            template_id: templateDoc.id,
+                            installment_index: inst.index,
+                            due_date: inst.due_date,
+                            annual_total: totalAmount,
+                            amount,
+                            status: "unpaid",
+                            paid_amount: 0,
+                            paid_at: null,
+                            created_at: Timestamp.now(),
+                        });
+                    });
+
+                });
+
+                alert("تم حفظ النتيجة - الطالب راسب و تم تسجيله للسنة القادمة");
+
+                setOpenPromotionModal(false);
+                return;
+            }
+
+            // 🟢 CASE 2: PASS + GRADUATED
+            if (result === "pass" && isGraduated) {
+                await runTransaction(DB, async (transaction) => {
+                    transaction.set(recordRef, {
+                        student_id: student.id,
+                        school_id: student.school_id,
+                        academic_year: record.academic_year,
+                        class_id: student.class_id,
+                        class_name: student.class_name,
+                        t1,
+                        t2,
+                        t3,
+                        final_average: average,
+                        result,
+                        created_at: Timestamp.now(),
+                    }, { merge: true });
+
+                    transaction.update(studentRef, {
+                        graduated: true,
+                    });
+                });
+
+                alert("تم تخريج الطالب بنجاح");
+                setOpenPromotionModal(false);
+                return;
+            }
+
+            // 🟢 CASE 1: PASS → move to next class automatically
+            const nextClasses = getNextClasses();
+
+            if (!nextClasses.length) {
+                alert("لا يوجد صف تالي، يمكن تخريج الطالب");
+                setLoadingPromotion(false);
+                return;
+            }
+
+            // ❗ enforce selection
+            if (!selectedNextClass) {
+                alert("يرجى اختيار الصف التالي");
+                setLoadingPromotion(false);
+                return;
+            }
+
+            const nextClass = nextClasses.find(c => c.id === selectedNextClass);
+
+            if (!nextClass) {
+                alert("الصف المختار غير صالح");
+                setLoadingPromotion(false);
+                return;
+            }
 
             // 🔹 Billing template
             const templatesSnap = await getDocs(
-                query(
-                    collection(DB, "billing_templates"),
-                    where("school_id", "==", student.school_id),
-                    where("academic_year", "==", nextYear)
-                )
+            query(
+                collection(DB, "billing_templates"),
+                where("school_id", "==", student.school_id),
+                where("academic_year", "==", nextYear)
+            )
             );
 
             if (templatesSnap.empty) {
-                alert(`لا يوجد قالب فواتير للسنة ${nextYear}\nيرجى إنشاء القالب قبل الترقية`);
+                alert(`لا يوجد قالب فواتير للسنة ${nextYear}`);
                 setLoadingPromotion(false);
                 return;
             }
 
             const templateDoc = templatesSnap.docs[0];
-            const template = templateDoc?.data();
+            const template = templateDoc.data();
 
-            // 🔹 Old class conversations
+            // 🔹 Conversations
             const oldConvSnap = await getDocs(
                 query(
                     collection(DB, "conversations"),
@@ -247,7 +423,6 @@ const StudentDetails = () => {
                 )
             );
 
-            // 🔹 New class conversations
             const newConvSnap = await getDocs(
                 query(
                     collection(DB, "conversations"),
@@ -259,7 +434,7 @@ const StudentDetails = () => {
 
             await runTransaction(DB, async (transaction) => {
 
-                // 🔹 1. SAVE CURRENT YEAR RESULT
+                // ✅ Save result
                 transaction.set(recordRef, {
                     student_id: student.id,
                     school_id: student.school_id,
@@ -274,41 +449,22 @@ const StudentDetails = () => {
                     created_at: Timestamp.now(),
                 }, { merge: true });
 
-                let targetClass = null;
+                // ✅ Update student class
+                transaction.update(studentRef, {
+                    class_id: nextClass.id,
+                    class_name: nextClass.name,
+                    class_grade: nextClass.grade,
+                });
 
-                if (isGraduated) {
-                    transaction.update(studentRef, {
-                        graduated: true,
-                    });
-                    return;
-                }
-
-                if (result === "fail") {
-                    targetClass = classes.find(c => c.id === student.class_id);
-                } else {
-                    targetClass = nextClass;
-                }
-
-                if (!targetClass) throw new Error("CLASS_NOT_FOUND");
-
-
-                // 🔹 2. UPDATE STUDENT CLASS (ONLY IF SUCCESS)
-                if (result === "pass") {
-                    transaction.update(studentRef, {
-                        class_id: targetClass.id,
-                        class_name: targetClass.name,
-                        class_grade: targetClass.grade,
-                    });
-                }
-                
+                // ✅ Create next year record
                 const newRecordRef = doc(collection(DB, "academic_records"));
 
                 transaction.set(newRecordRef, {
                     student_id: student.id,
                     school_id: student.school_id,
                     academic_year: nextYear,
-                    class_id: targetClass.id,
-                    class_name: targetClass.name,
+                    class_id: nextClass.id,
+                    class_name: nextClass.name,
                     t1: null,
                     t2: null,
                     t3: null,
@@ -317,11 +473,8 @@ const StudentDetails = () => {
                     created_at: Timestamp.now(),
                 });
 
-
-                // 🔹 4. CREATE BILLS
-                const gradeName = targetClass.grade;
-                const gradeTotal = template.grade_amounts?.[gradeName];
-
+                // ✅ Bills
+                const gradeTotal = template.grade_amounts?.[nextClass.grade];
                 if (!gradeTotal) throw new Error("GRADE_AMOUNT_NOT_FOUND");
 
                 const numberOfPayments = template.number_of_payments;
@@ -332,54 +485,47 @@ const StudentDetails = () => {
                 template.installments.forEach((inst, index) => {
                     const billRef = doc(collection(DB, "student_bills"));
 
-                    const adjustedAmount = index === 0 ? baseAmount + remainder : baseAmount;
+                    const amount = index === 0 ? baseAmount + remainder : baseAmount;
 
                     transaction.set(billRef, {
                         student_id: student.id,
                         school_id: student.school_id,
                         academic_year: nextYear,
-                        class_id: targetClass.id,
-                        grade_name: gradeName,
+                        class_id: nextClass.id,
+                        grade_name: nextClass.grade,
                         template_id: templateDoc.id,
                         installment_index: inst.index,
                         due_date: inst.due_date,
                         annual_total: totalAmount,
-                        amount: adjustedAmount,
+                        amount,
                         status: "unpaid",
                         paid_amount: 0,
                         paid_at: null,
                         created_at: Timestamp.now(),
                     });
-                }); 
+                });
 
-
-                //5. HANDLE CONVERSATIONS
-                if (result === "pass") {
-                    oldConvSnap.docs.forEach((docSnap) => {
-                        transaction.update(doc(DB, "conversations", docSnap.id), {
-                            participant_ids: arrayRemove(student.id),
-                        });
+                // ✅ Conversations
+                oldConvSnap.docs.forEach((docSnap) => {
+                    transaction.update(doc(DB, "conversations", docSnap.id), {
+                    participant_ids: arrayRemove(student.id),
                     });
-                }
+                });
 
-                if (result === "pass" && newConvSnap) {
-                    newConvSnap.docs.forEach((docSnap) => {
-                        transaction.update(doc(DB, "conversations", docSnap.id), {
-                            participant_ids: arrayUnion(student.id),
-                        });
+                newConvSnap.docs.forEach((docSnap) => {
+                    transaction.update(doc(DB, "conversations", docSnap.id), {
+                    participant_ids: arrayUnion(student.id),
                     });
-                }
+                });
 
             });
 
             alert("تمت الترقية بنجاح");
-
             setOpenPromotionModal(false);
-            //router.refresh();
 
         } catch (e) {
             console.error(e);
-            alert("فشل الترقية");
+            alert("فشل العملية");
         } finally {
             setLoadingPromotion(false);
         }
@@ -503,7 +649,6 @@ const StudentDetails = () => {
                     where("school_id", "==", schoolId),
                     where("class_id", "==", classId),
                     where("scope", "==", "class_subject"),
-                    //where("archived", "==", false)
                 )
             );
 
